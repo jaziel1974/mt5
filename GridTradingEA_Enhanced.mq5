@@ -511,8 +511,10 @@ void CheckFilledOrders()
 {
     static int lastPositionCount = 0;
     int currentPositionCount = 0;
-    
-    // Count current positions
+    // Track tickets of current positions
+    ulong currentTickets[100];
+    int ticketIdx = 0;
+    // Count current positions and collect tickets
     for(int i = 0; i < PositionsTotal(); i++)
     {
         if(PositionGetTicket(i))
@@ -521,18 +523,52 @@ void CheckFilledOrders()
                PositionGetInteger(POSITION_MAGIC) == InpMagicNumber &&
                PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
             {
+                currentTickets[ticketIdx++] = PositionGetInteger(POSITION_TICKET);
                 currentPositionCount++;
             }
         }
     }
-    
-    // If new position was opened, update profit targets
+    // For each buy position, ensure a corresponding sell limit exists
+    double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+    for(int j = 0; j < ticketIdx; j++)
+    {
+        ulong posTicket = currentTickets[j];
+        double entryPrice = 0;
+        double volume = 0;
+        if(PositionSelectByTicket(posTicket))
+        {
+            entryPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+            volume = PositionGetDouble(POSITION_VOLUME);
+        }
+        double tpPrice = NormalizeDouble(entryPrice + InpProfitPoints * point, digits);
+        bool sellLimitExists = false;
+        for(int k = 0; k < OrdersTotal(); k++)
+        {
+            if(OrderGetTicket(k))
+            {
+                if(OrderGetString(ORDER_SYMBOL) == _Symbol &&
+                   OrderGetInteger(ORDER_MAGIC) == InpMagicNumber &&
+                   OrderGetInteger(ORDER_TYPE) == ORDER_TYPE_SELL_LIMIT &&
+                   MathAbs(OrderGetDouble(ORDER_PRICE_OPEN) - tpPrice) < point*0.5 &&
+                   MathAbs(OrderGetDouble(ORDER_VOLUME_CURRENT) - volume) < 0.00001)
+                {
+                    sellLimitExists = true;
+                    break;
+                }
+            }
+        }
+        if(!sellLimitExists)
+        {
+            PlaceSellLimitOrder(tpPrice, volume);
+        }
+    }
+    // If new position was opened, update profit targets (legacy logic)
     if(currentPositionCount > lastPositionCount)
     {
         LogMessage(2, "New position detected. Updating profit targets...");
         UpdateProfitTargets();
     }
-    
     lastPositionCount = currentPositionCount;
 }
 
