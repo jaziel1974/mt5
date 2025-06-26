@@ -323,6 +323,7 @@ void CheckExistingPositions()
     totalVolume = 0;
     averagePrice = 0;
     isInMarket = false;
+    int openPositions = 0;
     
     // Check positions
     for(int i = 0; i < PositionsTotal(); i++)
@@ -334,16 +335,15 @@ void CheckExistingPositions()
                PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
             {
                 isInMarket = true;
+                openPositions++;
                 totalBuyOrders++;
                 double volume = PositionGetDouble(POSITION_VOLUME);
                 double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
-                
                 totalVolume += volume;
                 averagePrice += openPrice * volume;
             }
         }
     }
-    
     // Check pending orders
     for(int i = 0; i < OrdersTotal(); i++)
     {
@@ -353,18 +353,17 @@ void CheckExistingPositions()
                OrderGetInteger(ORDER_MAGIC) == InpMagicNumber &&
                OrderGetInteger(ORDER_TYPE) == ORDER_TYPE_BUY_LIMIT)
             {
-                isInMarket = true;
                 totalBuyOrders++;
             }
         }
     }
-    
     // Calculate average price
     if(totalVolume > 0)
     {
         averagePrice = averagePrice / totalVolume;
     }
-    
+    // Only set isInMarket true if there are open positions
+    isInMarket = (openPositions > 0);
     LogMessage(3, StringFormat("Market Status - In Market: %s, Total Orders: %d, Average Price: %.5f, Total Volume: %.2f", 
               isInMarket ? "true" : "false", totalBuyOrders, averagePrice, totalVolume));
 }

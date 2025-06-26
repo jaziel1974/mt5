@@ -63,7 +63,7 @@ bool IsSymbolAllowed(string symbol)
     
     for(int i = 0; i < count; i++)
     {
-        if(StringTrimLeft(StringTrimRight(symbols[i])) == symbol)
+        if(symbols[i] == symbol)
             return true;
     }
     
@@ -73,7 +73,7 @@ bool IsSymbolAllowed(string symbol)
 // Check margin requirements
 bool IsMarginSufficient(double requiredMargin)
 {
-    double freeMargin = AccountInfoDouble(ACCOUNT_FREEMARGIN);
+    double freeMargin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
     double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
     
     if(marginLevel > 0 && marginLevel < MIN_FREE_MARGIN_PERCENT)
@@ -94,7 +94,7 @@ double GetAdjustedLotSize(double baseLotSize)
 {
     double balance = AccountInfoDouble(ACCOUNT_BALANCE);
     double minLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-    double maxLot = SymbolInfoDouble(_Symbol, VOLUME_MAX);
+    double maxLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
     
     // Simple risk-based adjustment (can be customized)
     double adjustedLot = baseLotSize;
